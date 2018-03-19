@@ -6,6 +6,7 @@ cache:
 matrix:
   include:
     - python: 2.7
+      env: DEPLOY_PYPI=true
     - python: 3.6
 
 install:
@@ -26,3 +27,4 @@ deploy:
     tags: true
     repo: leukgen/disambiguate
     branch: master
+    condition: $DEPLOY_PYPI = true
