@@ -4,15 +4,16 @@
 [![travis badge][travis_badge]][travis_base]
 [![codecov badge][codecov_badge]][codecov_base]
 [![DOI][zenodo_badge]][zenodo_base]
+[![Paper][paper_badge]][paper]
 
 Disambiguation algorithm for reads aligned to two species (e.g. human and mouse genomes) from
 Tophat, Hisat2, STAR or BWA mem.
 
-⚠️ &nbsp; **IMPORTANT**: This repo is a frozen copy of the original [`AstraZeneca-NGS/disambiguate`]. We are not the core developers but we may be able to help.
+⚠️ &nbsp; **IMPORTANT**: This repo is a fork of the original [`AstraZeneca-NGS/disambiguate`]. We fixed a couple of bugs, added CI testing, and automated deployment to [`PyPi`][pypi_base]. We are not the core developers but we may be able to help.
 
 ## Usage
 
-This is a `python 2` only program, install from `PyPi`:
+This is a `python 2` abd `python 3` compatible program, install from `PyPi` with:
 
     # will install pysam
     pip install disambiguate
@@ -38,15 +39,17 @@ A pre-compiled binary is also available in bioconda http://bioconda.github.io/re
 
 ## Citing
 
-Ahdesmäki MJ, Gray SR, Johnson JH and Lai Z. Disambiguate: An open-source application for disambiguating two species in next generation sequencing data from grafted samples. F1000Research 2016, 5:2741, [DOI:10.12688/f1000research.10082.1](http://dx.doi.org/10.12688/f1000research.10082.1)
+Ahdesmäki MJ, Gray SR, Johnson JH and Lai Z. Disambiguate: An open-source application for disambiguating two species in next generation sequencing data from grafted samples. F1000Research 2016, 5:2741, [DOI:10.12688/f1000research.10082.1][paper]
 
 <!-- references -->
 [`AstraZeneca-NGS/disambiguate`]: https://github.com/AstraZeneca-NGS/disambiguate
-[zenodo_badge]: https://zenodo.org/badge/DOI/10.5281/zenodo.166017.svg
-[zenodo_base]: https://doi.org/10.5281/zenodo.166017
-[travis_badge]: https://img.shields.io/travis/leukgen/disambiguate.svg
-[travis_base]: https://travis-ci.org/leukgen/disambiguate
-[pypi_badge]: https://img.shields.io/pypi/v/disambiguate.svg
-[pypi_base]: https://pypi.python.org/pypi/disambiguate
 [codecov_badge]: https://codecov.io/gh/leukgen/disambiguate/branch/master/graph/badge.svg
 [codecov_base]: https://codecov.io/gh/leukgen/disambiguate
+[paper_badge]: https://img.shields.io/badge/paper-%F0%9F%93%84-blue.svg
+[paper]: http://dx.doi.org/10.12688/f1000research.10082.1
+[pypi_badge]: https://img.shields.io/pypi/v/disambiguate.svg
+[pypi_base]: https://pypi.python.org/pypi/disambiguate
+[travis_badge]: https://img.shields.io/travis/leukgen/disambiguate.svg
+[travis_base]: https://travis-ci.org/leukgen/disambiguate
+[zenodo_badge]: https://zenodo.org/badge/DOI/10.5281/zenodo.166017.svg
+[zenodo_base]: https://doi.org/10.5281/zenodo.166017
