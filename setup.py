@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name="disambiguate",
-    version="1.0",
+    version="1.0.1",
     description="Script to disambiguate reads mapping to multiple genomes.",
     author="Miika Ahdesmaki",
     license="MIT",
