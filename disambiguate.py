@@ -271,7 +271,8 @@ def run_disambiguate(args):
         if not path.isfile(mousefilenamesorted):
             pysam.sort("-n", "-m", "2000000000", "-o",
                        mousefilenamesorted, mousefilename)
-   # read in human reads and form a dictionary
+
+    # read in human reads and form a dictionary
     myHumanFile = pysam.Samfile(humanfilenamesorted, "rb")
     myMouseFile = pysam.Samfile(mousefilenamesorted, "rb")
     if not path.isdir(outputdir):
@@ -329,12 +330,12 @@ def run_disambiguate(args):
             humlist.append(nexthumread)
             # read more reads with same qname (the function modifies humlist directly)
             nexthumread = read_next_reads(myHumanFile, humlist)
-            if nexthumread == None:
+            if not nexthumread:
                 EOFhuman = True
             moulist.append(nextmouread)
             # read more reads with same qname (the function modifies moulist directly)
             nextmouread = read_next_reads(myMouseFile, moulist)
-            if nextmouread == None:
+            if not nextmouread:
                 EOFmouse = True
 
         # perform comparison to check mouse, human or ambiguous
