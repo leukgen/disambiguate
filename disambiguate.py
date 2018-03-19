@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This is the main function to call for disambiguating between BAM files 
+This is the main function to call for disambiguating between BAM files
 from two species that have alignments from the same source of fastq files.
 It is part of the explant RNA/DNA-Seq workflow where an informatics
 approach is used to distinguish between e.g. human and mouse or rat RNA/DNA reads.
@@ -15,7 +15,7 @@ NM and NH is evaluated and the lowest sum wins the paired end reads. For equal
 scores, the reads are assigned as ambiguous.
 
 The alternative algorithm (STAR, bwa) disambiguates (for aligned reads) by tags
-AS (alignment score, higher better), followed by NM (edit distance, lower 
+AS (alignment score, higher better), followed by NM (edit distance, lower
 better).
 
 Code by Miika Ahdesmaki July-August 2013, based on original Perl implementation
@@ -24,55 +24,72 @@ for Tophat by Zhongwu Lai.
 
 
 from __future__ import print_function
-import sys, re, pysam
+import sys
+import re
+import pysam
 from array import array
 from os import path, makedirs
 from argparse import ArgumentParser, RawTextHelpFormatter
 
 # "natural comparison" for strings
+
+
 def nat_cmp(a, b):
-    convert = lambda text: int(text) if text.isdigit() else text # lambda function to convert text to int if number present
-    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] # split string to piecewise strings and string numbers
+    # lambda function to convert text to int if number present
+    def convert(text): return int(text) if text.isdigit() else text
+
+    # split string to piecewise strings and string numbers
+    def alphanum_key(key): return [convert(c)
+                                   for c in re.split('([0-9]+)', key)]
     #return cmp(alphanum_key(a), alphanum_key(b)) # use internal cmp to compare piecewise strings and numbers
-    return (alphanum_key(a) > alphanum_key(b))-(alphanum_key(a) < alphanum_key(b))
+    return (alphanum_key(a) > alphanum_key(b)) - (alphanum_key(a) < alphanum_key(b))
 
 # read reads into a list object for as long as the read qname is constant (sorted file). Return the first read with new qname or None
+
+
 def read_next_reads(fileobject, listobject):
     qnamediff = False
     while not qnamediff:
         try:
-            myRead=fileobject.next()
+            myRead = next(fileobject)
         except StopIteration:
             #print("5")
-            return None # return None as the name of the new reads (i.e. no more new reads)
-        if nat_cmp(myRead.qname, listobject[0].qname)==0:
+            # return None as the name of the new reads (i.e. no more new reads)
+            return None
+        if nat_cmp(myRead.qname, listobject[0].qname) == 0:
             listobject.append(myRead)
         else:
             qnamediff = True
-    return myRead # this is the first read with a new qname
+    return myRead  # this is the first read with a new qname
 
 # disambiguate between two lists of reads
+
+
 def disambiguate(humanlist, mouselist, disambalgo):
-    if disambalgo in ['tophat','hisat2']:
-        dv = 2**13 # a high quality score to replace missing quality scores (no real quality score should be this high)
-        sa = array('i',(dv for i in range(0,4))) # score array, with [human_1_QS, human_2_QS, mouse_1_QS, mouse_2_QS]
+    if disambalgo in ['tophat', 'hisat2']:
+        # a high quality score to replace missing quality scores (no real quality score should be this high)
+        dv = 2**13
+        # score array, with [human_1_QS, human_2_QS, mouse_1_QS, mouse_2_QS]
+        sa = array('i', (dv for i in range(0, 4)))
         for read in humanlist:
-            if 0x4&read.flag: # flag 0x4 means unaligned
+            if 0x4 & read.flag:  # flag 0x4 means unaligned
                 continue
             QScore = read.opt('XO') + read.opt('NM') + read.opt('NH')
            # directionality (_1 or _2)
-            d12 = 0 if 0x40&read.flag else 1
-            if sa[d12]>QScore:
-                sa[d12]=QScore # update to lowest (i.e. 'best') quality score
+            d12 = 0 if 0x40 & read.flag else 1
+            if sa[d12] > QScore:
+                # update to lowest (i.e. 'best') quality score
+                sa[d12] = QScore
         for read in mouselist:
-            if 0x4&read.flag: # flag 0x4 means unaligned
+            if 0x4 & read.flag:  # flag 0x4 means unaligned
                 continue
             QScore = read.opt('XO') + read.opt('NM') + read.opt('NH')
            # directionality (_1 or _2)
-            d12 = 2 if 0x40&read.flag else 3
-            if sa[d12]>QScore:
-                sa[d12]=QScore # update to lowest (i.e. 'best') quality score
-        if min(sa[0:2])==min(sa[2:4]) and max(sa[0:2])==max(sa[2:4]): # ambiguous
+            d12 = 2 if 0x40 & read.flag else 3
+            if sa[d12] > QScore:
+                # update to lowest (i.e. 'best') quality score
+                sa[d12] = QScore
+        if min(sa[0:2]) == min(sa[2:4]) and max(sa[0:2]) == max(sa[2:4]):  # ambiguous
             return 0
         elif min(sa[0:2]) < min(sa[2:4]) or min(sa[0:2]) == min(sa[2:4]) and max(sa[0:2]) < max(sa[2:4]):
             # assign to human
@@ -81,48 +98,55 @@ def disambiguate(humanlist, mouselist, disambalgo):
             # assign to mouse
             return -1
     elif disambalgo.lower() in ('bwa', 'star'):
-        dv = -2^13 # default value, low
-        bwatags = ['AS', 'NM']# ,'XS'] # in order of importance (compared sequentially, not as a sum as for tophat)
-        bwatagsigns = [1, -1]#,1] # for AS and XS higher is better. for NM lower is better, thus multiply by -1
+        dv = -2 ^ 13  # default value, low
+        # ,'XS'] # in order of importance (compared sequentially, not as a sum as for tophat)
+        bwatags = ['AS', 'NM']
+        # ,1] # for AS and XS higher is better. for NM lower is better, thus multiply by -1
+        bwatagsigns = [1, -1]
         AS = list()
         for x in range(0, len(bwatagsigns)):
-            AS.append(array('i',(dv for i in range(0,4)))) # alignment score array, with [human_1_Score, human_2_Score, mouse_1_Score, mouse_2_Score]
+            # alignment score array, with [human_1_Score, human_2_Score, mouse_1_Score, mouse_2_Score]
+            AS.append(array('i', (dv for i in range(0, 4))))
         #
         for read in humanlist:
-            if 0x4&read.flag: # flag 0x4 means unaligned
+            if 0x4 & read.flag:  # flag 0x4 means unaligned
                 continue
             # directionality (_1 or _2)
-            d12 = 0 if 0x40&read.flag else 1
+            d12 = 0 if 0x40 & read.flag else 1
             for x in range(0, len(bwatagsigns)):
                 try:
-                    QScore = bwatagsigns[x]*read.opt(bwatags[x])
+                    QScore = bwatagsigns[x] * read.opt(bwatags[x])
                 except KeyError:
                     if bwatags[x] == 'NM':
-                        bwatags[x] = 'nM' # oddity of STAR
+                        bwatags[x] = 'nM'  # oddity of STAR
                     elif bwatags[x] == 'AS':
-                        continue # this can happen for e.g. hg38 ALT-alignments (missing AS)
-                    QScore = bwatagsigns[x]*read.opt(bwatags[x])
-                    
-                if AS[x][d12]<QScore:
-                    AS[x][d12]=QScore # update to highest (i.e. 'best') quality score
+                        # this can happen for e.g. hg38 ALT-alignments (missing AS)
+                        continue
+                    QScore = bwatagsigns[x] * read.opt(bwatags[x])
+
+                if AS[x][d12] < QScore:
+                    # update to highest (i.e. 'best') quality score
+                    AS[x][d12] = QScore
         #
         for read in mouselist:
-            if 0x4&read.flag: # flag 0x4 means unaligned
+            if 0x4 & read.flag:  # flag 0x4 means unaligned
                 continue
            # directionality (_1 or _2)
-            d12 = 2 if 0x40&read.flag else 3
+            d12 = 2 if 0x40 & read.flag else 3
             for x in range(0, len(bwatagsigns)):
                 try:
-                    QScore = bwatagsigns[x]*read.opt(bwatags[x])
+                    QScore = bwatagsigns[x] * read.opt(bwatags[x])
                 except KeyError:
                     if bwatags[x] == 'NM':
-                        bwatags[x] = 'nM' # oddity of STAR
+                        bwatags[x] = 'nM'  # oddity of STAR
                     elif bwatags[x] == 'AS':
-                        continue # this can happen for e.g. hg38 ALT-alignments (missing AS)
-                    QScore = bwatagsigns[x]*read.opt(bwatags[x])
-                
-                if AS[x][d12]<QScore:
-                    AS[x][d12]=QScore # update to highest (i.e. 'best') quality score
+                        # this can happen for e.g. hg38 ALT-alignments (missing AS)
+                        continue
+                    QScore = bwatagsigns[x] * read.opt(bwatags[x])
+
+                if AS[x][d12] < QScore:
+                    # update to highest (i.e. 'best') quality score
+                    AS[x][d12] = QScore
         #
         for x in range(0, len(bwatagsigns)):
             if max(AS[x][0:2]) > max(AS[x][2:4]) or max(AS[x][0:2]) == max(AS[x][2:4]) and min(AS[x][0:2]) > min(AS[x][2:4]):
@@ -131,7 +155,7 @@ def disambiguate(humanlist, mouselist, disambalgo):
             elif max(AS[x][0:2]) < max(AS[x][2:4]) or max(AS[x][0:2]) == max(AS[x][2:4]) and min(AS[x][0:2]) < min(AS[x][2:4]):
                 # assign to mouse
                 return -1
-        return 0 # ambiguous
+        return 0  # ambiguous
     else:
         print("Not implemented yet")
         sys.exit(2)
@@ -154,7 +178,7 @@ NM and NH is evaluated and the lowest sum wins the paired end reads. For equal
 scores (both mates, both species), the reads are assigned as ambiguous.
 
 The alternative algorithm (STAR, bwa) disambiguates (for aligned reads) by tags
-AS (alignment score, higher better), followed by NM (edit distance, lower 
+AS (alignment score, higher better), followed by NM (edit distance, lower
 better).
 
 The output directory will contain four files:\n
@@ -169,7 +193,8 @@ disambiguate.py test/human.bam test/mouse.bam
 disambiguate.py -s mysample1 test/human.bam test/mouse.bam
    """
 
-    parser = ArgumentParser(description=description, formatter_class=RawTextHelpFormatter)
+    parser = ArgumentParser(description=description,
+                            formatter_class=RawTextHelpFormatter)
     parser.add_argument('A', help='Input BAM file for species A.')
     parser.add_argument('B', help='Input BAM file for species B.')
     parser.add_argument('-o', '--output-dir', default="disambres",
@@ -208,45 +233,57 @@ disambiguate.py -s mysample1 test/human.bam test/mouse.bam
                          "must be specified as positional arguments\n")
         sys.exit(2)
     if len(samplenameprefix) < 1:
-        humanprefix = path.basename(humanfilename.replace(".bam",""))
-        mouseprefix = path.basename(mousefilename.replace(".bam",""))
+        humanprefix = path.basename(humanfilename.replace(".bam", ""))
+        mouseprefix = path.basename(mousefilename.replace(".bam", ""))
     else:
         if samplenameprefix.endswith(".bam"):
-            samplenameprefix = samplenameprefix[0:samplenameprefix.rfind(".bam")] # the above if is not stricly necessary for this to work
+            # the above if is not stricly necessary for this to work
+            samplenameprefix = samplenameprefix[0:samplenameprefix.rfind(
+                ".bam")]
         humanprefix = samplenameprefix
         mouseprefix = samplenameprefix
-    samplenameprefix = None # clear variable
+    samplenameprefix = None  # clear variable
     if disambalgo.lower() not in supportedalgorithms:
-        print(disambalgo+" is not a supported disambiguation scheme at the moment.")
+        print(disambalgo + " is not a supported disambiguation scheme at the moment.")
         sys.exit(2)
 
     if disablesort:
-        humanfilenamesorted = humanfilename # assumed to be sorted externally...
-        mousefilenamesorted = mousefilename # assumed to be sorted externally...
+        # assumed to be sorted externally...
+        humanfilenamesorted = humanfilename
+        # assumed to be sorted externally...
+        mousefilenamesorted = mousefilename
     else:
         if not path.isdir(intermdir):
             makedirs(intermdir)
-        humanfilenamesorted = path.join(intermdir,humanprefix+".speciesA.namesorted.bam")
-        mousefilenamesorted = path.join(intermdir,mouseprefix+".speciesB.namesorted.bam")
+        humanfilenamesorted = path.join(
+            intermdir, humanprefix + ".speciesA.namesorted.bam")
+        mousefilenamesorted = path.join(
+            intermdir, mouseprefix + ".speciesB.namesorted.bam")
         if not path.isfile(humanfilenamesorted):
-            pysam.sort("-n","-m","2000000000","-o",humanfilenamesorted,humanfilename)
+            pysam.sort("-n", "-m", "2000000000", "-o",
+                       humanfilenamesorted, humanfilename)
         if not path.isfile(mousefilenamesorted):
-            pysam.sort("-n","-m","2000000000","-o",mousefilenamesorted,mousefilename)
+            pysam.sort("-n", "-m", "2000000000", "-o",
+                       mousefilenamesorted, mousefilename)
    # read in human reads and form a dictionary
-    myHumanFile = pysam.Samfile(humanfilenamesorted, "rb" )
-    myMouseFile = pysam.Samfile(mousefilenamesorted, "rb" )
+    myHumanFile = pysam.Samfile(humanfilenamesorted, "rb")
+    myMouseFile = pysam.Samfile(mousefilenamesorted, "rb")
     if not path.isdir(outputdir):
         makedirs(outputdir)
-    myHumanUniqueFile = pysam.Samfile(path.join(outputdir, humanprefix+".disambiguatedSpeciesA.bam"), "wb", template=myHumanFile)
-    myHumanAmbiguousFile = pysam.Samfile(path.join(outputdir, humanprefix+".ambiguousSpeciesA.bam"), "wb", template=myHumanFile)
-    myMouseUniqueFile = pysam.Samfile(path.join(outputdir, mouseprefix+".disambiguatedSpeciesB.bam"), "wb", template=myMouseFile)
-    myMouseAmbiguousFile = pysam.Samfile(path.join(outputdir, mouseprefix+".ambiguousSpeciesB.bam"), "wb", template=myMouseFile)
-    summaryFile = open(path.join(outputdir,humanprefix+'_summary.txt'),'w')
+    myHumanUniqueFile = pysam.Samfile(path.join(
+        outputdir, humanprefix + ".disambiguatedSpeciesA.bam"), "wb", template=myHumanFile)
+    myHumanAmbiguousFile = pysam.Samfile(path.join(
+        outputdir, humanprefix + ".ambiguousSpeciesA.bam"), "wb", template=myHumanFile)
+    myMouseUniqueFile = pysam.Samfile(path.join(
+        outputdir, mouseprefix + ".disambiguatedSpeciesB.bam"), "wb", template=myMouseFile)
+    myMouseAmbiguousFile = pysam.Samfile(path.join(
+        outputdir, mouseprefix + ".ambiguousSpeciesB.bam"), "wb", template=myMouseFile)
+    summaryFile = open(path.join(outputdir, humanprefix + '_summary.txt'), 'w')
 
     #initialise
     try:
-        nexthumread=myHumanFile.next()
-        nextmouread=myMouseFile.next()
+        nexthumread = next(myHumanFile)
+        nextmouread = next(myMouseFile)
     except StopIteration:
         print("No reads in one or either of the input files")
         sys.exit(2)
@@ -254,55 +291,59 @@ disambiguate.py -s mysample1 test/human.bam test/mouse.bam
     EOFmouse = EOFhuman = False
     prevHumID = '-+=RANDOMSTRING=+-'
     prevMouID = '-+=RANDOMSTRING=+-'
-    while not EOFmouse&EOFhuman:
-        while not (nat_cmp(nexthumread.qname,nextmouread.qname) == 0):
+    while not EOFmouse & EOFhuman:
+        while not (nat_cmp(nexthumread.qname, nextmouread.qname) == 0):
             # check order between current human and mouse qname (find a point where they're identical, i.e. in sync)
-            while nat_cmp(nexthumread.qname,nextmouread.qname) > 0 and not EOFmouse: # mouse is "behind" human, output to mouse disambiguous
+            # mouse is "behind" human, output to mouse disambiguous
+            while nat_cmp(nexthumread.qname, nextmouread.qname) > 0 and not EOFmouse:
                 myMouseUniqueFile.write(nextmouread)
                 if not nextmouread.qname == prevMouID:
-                    nummou+=1 # increment mouse counter for unique only
+                    nummou += 1  # increment mouse counter for unique only
                 prevMouID = nextmouread.qname
                 try:
-                    nextmouread=myMouseFile.next()
+                    nextmouread = next(myMouseFile)
                 except StopIteration:
-                    EOFmouse=True
-            while nat_cmp(nexthumread.qname,nextmouread.qname) < 0 and not EOFhuman: # human is "behind" mouse, output to human disambiguous
+                    EOFmouse = True
+            # human is "behind" mouse, output to human disambiguous
+            while nat_cmp(nexthumread.qname, nextmouread.qname) < 0 and not EOFhuman:
                 myHumanUniqueFile.write(nexthumread)
                 if not nexthumread.qname == prevHumID:
-                    numhum+=1 # increment human counter for unique only
+                    numhum += 1  # increment human counter for unique only
                 prevHumID = nexthumread.qname
                 try:
-                    nexthumread=myHumanFile.next()
+                    nexthumread = next(myHumanFile)
                 except StopIteration:
-                    EOFhuman=True
+                    EOFhuman = True
             if EOFhuman or EOFmouse:
                 break
         # at this point the read qnames are identical and/or we've reached EOF
         humlist = list()
         moulist = list()
-        if nat_cmp(nexthumread.qname,nextmouread.qname) == 0:
+        if nat_cmp(nexthumread.qname, nextmouread.qname) == 0:
             humlist.append(nexthumread)
-            nexthumread = read_next_reads(myHumanFile, humlist) # read more reads with same qname (the function modifies humlist directly)
+            # read more reads with same qname (the function modifies humlist directly)
+            nexthumread = read_next_reads(myHumanFile, humlist)
             if nexthumread == None:
                 EOFhuman = True
             moulist.append(nextmouread)
-            nextmouread = read_next_reads(myMouseFile, moulist) # read more reads with same qname (the function modifies moulist directly)
+            # read more reads with same qname (the function modifies moulist directly)
+            nextmouread = read_next_reads(myMouseFile, moulist)
             if nextmouread == None:
                 EOFmouse = True
 
         # perform comparison to check mouse, human or ambiguous
         if len(moulist) > 0 and len(humlist) > 0:
             myAmbiguousness = disambiguate(humlist, moulist, disambalgo)
-            if myAmbiguousness < 0: # mouse
-                nummou+=1 # increment mouse counter
+            if myAmbiguousness < 0:  # mouse
+                nummou += 1  # increment mouse counter
                 for myRead in moulist:
                     myMouseUniqueFile.write(myRead)
-            elif myAmbiguousness > 0: # human
-                numhum+=1 # increment human counter
+            elif myAmbiguousness > 0:  # human
+                numhum += 1  # increment human counter
                 for myRead in humlist:
                     myHumanUniqueFile.write(myRead)
-            else: # ambiguous
-                numamb+=1 # increment ambiguous counter
+            else:  # ambiguous
+                numamb += 1  # increment ambiguous counter
                 for myRead in moulist:
                     myMouseAmbiguousFile.write(myRead)
                 for myRead in humlist:
@@ -312,27 +353,29 @@ disambiguate.py -s mysample1 test/human.bam test/mouse.bam
             while not EOFmouse:
                 myMouseUniqueFile.write(nextmouread)
                 if not nextmouread.qname == prevMouID:
-                    nummou+=1 # increment mouse counter for unique only
+                    nummou += 1  # increment mouse counter for unique only
                 prevMouID = nextmouread.qname
                 try:
-                    nextmouread=myMouseFile.next()
+                    nextmouread = next(myMouseFile)
                 except StopIteration:
                     #print("3")
-                    EOFmouse=True
+                    EOFmouse = True
         if EOFmouse:
             #flush the rest of the human reads
             while not EOFhuman:
                 myHumanUniqueFile.write(nexthumread)
                 if not nexthumread.qname == prevHumID:
-                    numhum+=1 # increment human counter for unique only
+                    numhum += 1  # increment human counter for unique only
                 prevHumID = nexthumread.qname
                 try:
-                    nexthumread=myHumanFile.next()
+                    nexthumread = next(myHumanFile)
                 except StopIteration:
-                    EOFhuman=True
+                    EOFhuman = True
 
-    summaryFile.write("sample\tunique species A pairs\tunique species B pairs\tambiguous pairs\n")
-    summaryFile.write(humanprefix+"\t"+str(numhum)+"\t"+str(nummou)+"\t"+str(numamb)+"\n")
+    summaryFile.write(
+        "sample\tunique species A pairs\tunique species B pairs\tambiguous pairs\n")
+    summaryFile.write(humanprefix + "\t" + str(numhum) +
+                      "\t" + str(nummou) + "\t" + str(numamb) + "\n")
     summaryFile.close()
     myHumanFile.close()
     myMouseFile.close()
@@ -346,6 +389,7 @@ def file_exists(fname):
     """Check if a file exists and is non-empty.
     """
     return path.exists(fname) and path.getsize(fname) > 0
+
 
 if __name__ == "__main__":
    main()
