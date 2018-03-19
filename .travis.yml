@@ -1,16 +1,28 @@
 language: python
 
-python:
-  - 3.6
+cache:
+  pip: true
 
-services:
-  - docker
+python:
+  - 2.7
 
 install:
-  - pip install -U codecov
+  - pip install -U codecov pytest pytest-cov
+  - pip install --editable .
 
-script:
-  - bash run-tests.sh
+script: pytest tests --cov=disambiguate
 
 after_success:
-  - codecov
+  - codecov --disable search
+
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  user: leukgen
+  password:
+    secure: pvCngOttB6mv3GBqSqEov0g7txKkCLZD9MTZLhBSE0sMdku3EpanDuMOYXv5Az9Z/UgYusYRmoImIbU7fctuCq3vn4+K31MKRCIRDv/HXBilQ+RCJlY6mkSVWE1To4kbGs0TmTky5VSdBoum6qvSE4cvPdvtU5pLUJm6+vURhzAbN84qYHJ5A70guhFefoYNGDrJIRdG77k5/FYjaljcAEQ4CDs1TmOrQNKaSCUL27eEvbRWBmXwtB+wOqEytJvVL5CQI32CYp2sHzWANM0wz3r2RvpJ8T4XBrbpfYuYYyC7doMuYG958rxsH5ERJWOMqvARRiL3bszK0OxEM6m9HlVAJOtbaI9ZQ0HvZs4ZwsxUKKZnGD2BWH2YWAOA4hxW3AdL9Njhe52tDGTm0LNM7UZhKFgjMyvVIzhri7t88sAk5JM247eiuylgIXkxTVrfGzRUFFNZMj4CopzL+i7hviCvFffYjHQGM9/WTaGYtsmaa8tqa3jG+mHhQk2sF1K0p/wNVKAvgulwqVl1YvpeZOa0HhQy7XxS2JBdFNRlUahO+zD0Q8mqUVH2r4y3G2LBEUCuhyAJFWWoilnD+LvIM+5XhFGRgRcjsSTw3/wcQE8eI6qeot4a42k9Aes0lQer1clSVK/W9TzbT45d0SnMDUvSpbMRZX/UxRS3TKTcNjk=
+  on:
+    tags: true
+    repo: leukgen/disambiguate
+    python: 2.7
+    branch: master
