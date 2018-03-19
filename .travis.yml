@@ -3,14 +3,15 @@ language: python
 cache:
   pip: true
 
-python:
-  - 2.7
+matrix:
+  include:
+    - python: 2.7
+    - python: 3.6
 
 install:
-  - pip install -U codecov pytest pytest-cov
-  - pip install --editable .
+  - pip install -U codecov tox-travis
 
-script: pytest tests --cov=disambiguate
+script: tox
 
 after_success:
   - codecov --disable search
@@ -24,5 +25,4 @@ deploy:
   on:
     tags: true
     repo: leukgen/disambiguate
-    python: 2.7
     branch: master

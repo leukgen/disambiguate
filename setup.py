@@ -23,7 +23,13 @@ setup(
         "Natural Language :: English",
         "Operating System :: Unix",
         "Operating System :: POSIX",
-        "Programming Language :: Python :: 2 :: Only",
-        "Topic :: Utilities"
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.6",
+        "Topic :: Utilities",
         ],
+    extras_require={
+        "test": [
+            "pytest-cov>=2.5.1",
+            ]
+        },
     )
