@@ -31,8 +31,38 @@ from array import array
 from os import path, makedirs
 from argparse import ArgumentParser, RawTextHelpFormatter
 
-# "natural comparison" for strings
+DESCRIPTION = """
+disambiguate.py disambiguates between two organisms that have alignments
+from the same source of fastq files. An example where this might be
+useful is as part of an explant RNA/DNA-Seq workflow where an informatics
+approach is used to distinguish between human and mouse RNA/DNA reads.
 
+For reads that have aligned to both organisms, the functionality is based on
+comparing quality scores from either Tophat of BWA. Read
+name is used to collect all alignments for both mates (_1 and _2) and
+compared between human and mouse alignments.
+
+For Tophat (default, can be changed using option -a) and Hisat2, the sum of the tags XO,
+NM and NH is evaluated and the lowest sum wins the paired end reads. For equal
+scores (both mates, both species), the reads are assigned as ambiguous.
+
+The alternative algorithm (STAR, bwa) disambiguates (for aligned reads) by tags
+AS (alignment score, higher better), followed by NM (edit distance, lower
+better).
+
+The output directory will contain four files:\n
+...disambiguatedSpeciesA.bam: Reads that could be assigned to species A
+...disambiguatedSpeciesB.bam: Reads that could be assigned to species B
+...ambiguousSpeciesA.bam: Reads aligned to species A that also aligned \n\tto B but could not be uniquely assigned to either
+...ambiguousSpeciesB.bam: Reads aligned to species B that also aligned \n\tto A but could not be uniquely assigned to either
+..._summary.txt: A summary of unique read names assigned to species A, B \n\tand ambiguous.
+
+Examples:
+disambiguate.py test/human.bam test/mouse.bam
+disambiguate.py -s mysample1 test/human.bam test/mouse.bam
+"""
+
+# "natural comparison" for strings
 
 def nat_cmp(a, b):
     # lambda function to convert text to int if number present
@@ -162,38 +192,13 @@ def disambiguate(humanlist, mouselist, disambalgo):
 
 
 def main():
-    description = """
-disambiguate.py disambiguates between two organisms that have alignments
-from the same source of fastq files. An example where this might be
-useful is as part of an explant RNA/DNA-Seq workflow where an informatics
-approach is used to distinguish between human and mouse RNA/DNA reads.
+    parser = get_parser()
+    args = parser.parse_args()
+    run_disambiguate(args)
 
-For reads that have aligned to both organisms, the functionality is based on
-comparing quality scores from either Tophat of BWA. Read
-name is used to collect all alignments for both mates (_1 and _2) and
-compared between human and mouse alignments.
 
-For Tophat (default, can be changed using option -a) and Hisat2, the sum of the tags XO,
-NM and NH is evaluated and the lowest sum wins the paired end reads. For equal
-scores (both mates, both species), the reads are assigned as ambiguous.
-
-The alternative algorithm (STAR, bwa) disambiguates (for aligned reads) by tags
-AS (alignment score, higher better), followed by NM (edit distance, lower
-better).
-
-The output directory will contain four files:\n
-...disambiguatedSpeciesA.bam: Reads that could be assigned to species A
-...disambiguatedSpeciesB.bam: Reads that could be assigned to species B
-...ambiguousSpeciesA.bam: Reads aligned to species A that also aligned \n\tto B but could not be uniquely assigned to either
-...ambiguousSpeciesB.bam: Reads aligned to species B that also aligned \n\tto A but could not be uniquely assigned to either
-..._summary.txt: A summary of unique read names assigned to species A, B \n\tand ambiguous.
-
-Examples:
-disambiguate.py test/human.bam test/mouse.bam
-disambiguate.py -s mysample1 test/human.bam test/mouse.bam
-   """
-
-    parser = ArgumentParser(description=description,
+def get_parser():
+    parser = ArgumentParser(description=DESCRIPTION,
                             formatter_class=RawTextHelpFormatter)
     parser.add_argument('A', help='Input BAM file for species A.')
     parser.add_argument('B', help='Input BAM file for species B.')
@@ -212,9 +217,10 @@ disambiguate.py -s mysample1 test/human.bam test/mouse.bam
                         choices=('tophat', 'hisat2', 'bwa', 'star'),
                         help='The aligner used to generate these reads. Some '
                         'aligners set different tags.')
-    args = parser.parse_args()
+    return parser
 
-    #code
+
+def run_disambiguate(args):
     numhum = nummou = numamb = 0
     #starttime = time.clock()
     # parse inputs
