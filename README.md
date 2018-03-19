@@ -3,8 +3,8 @@
 [![pypi badge][pypi_badge]][pypi_base]
 [![travis badge][travis_badge]][travis_base]
 [![codecov badge][codecov_badge]][codecov_base]
-[![DOI][zenodo_badge]][zenodo_base]
 [![Paper][paper_badge]][paper]
+[![DOI][zenodo_badge]][zenodo_base]
 
 Disambiguation algorithm for reads aligned to two species (e.g. human and mouse genomes) from
 Tophat, Hisat2, STAR or BWA mem.
