@@ -4,7 +4,7 @@ from setuptools import setup
 
 
 setup(
-    name="_disambiguate",
+    name="leukgen_disambiguate",
     version="1.0.1",
     description=(
         "Disambiguate reads mapping to multiple genomes. "

@@ -15,11 +15,21 @@ Tophat, Hisat2, STAR or BWA mem.
 
 This is a `python 2` abd `python 3` compatible program, install from `PyPi` with:
 
-    # will install pysam
-    pip install disambiguate
+    # will install pysam, OSX users see message below
+    pip install leukgen_disambiguate
 
     # see usage
     disambiguate --help
+
+**OSX Users**: if you have a brew installed `HTSLIB`, pysam will need these variables to compile:
+
+    # install HTSLIB and export paths
+    brew install htslib
+    export HTSLIB_LIBRARY_DIR=/usr/local/lib
+    export HTSLIB_INCLUDE_DIR=/usr/local/include
+
+    # install disambiguate
+    pip install leukgen_disambiguate
 
 ## C++ Implementation
 
