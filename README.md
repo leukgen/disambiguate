@@ -57,8 +57,8 @@ Ahdesmäki MJ, Gray SR, Johnson JH and Lai Z. Disambiguate: An open-source appli
 [codecov_base]: https://codecov.io/gh/leukgen/disambiguate
 [paper_badge]: https://img.shields.io/badge/paper-%F0%9F%93%84-blue.svg
 [paper]: http://dx.doi.org/10.12688/f1000research.10082.1
-[pypi_badge]: https://img.shields.io/pypi/v/disambiguate.svg
-[pypi_base]: https://pypi.python.org/pypi/disambiguate
+[pypi_badge]: https://img.shields.io/pypi/v/leukgen_disambiguate.svg
+[pypi_base]: https://pypi.python.org/pypi/leukgen_disambiguate
 [travis_badge]: https://img.shields.io/travis/leukgen/disambiguate.svg
 [travis_base]: https://travis-ci.org/leukgen/disambiguate
 [zenodo_badge]: https://zenodo.org/badge/DOI/10.5281/zenodo.166017.svg
